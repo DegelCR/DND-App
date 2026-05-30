@@ -1,0 +1,119 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-table-950: #0a0908;
+  --color-table-900: #12100e;
+  --color-table-800: #1c1916;
+  --color-table-700: #2a2520;
+  --color-table-600: #3d3630;
+  --color-table-500: #5c534a;
+  --color-table-400: #8a7f72;
+  --color-table-300: #b8aa98;
+  --color-table-200: #d9cfc0;
+  --color-table-100: #ede6db;
+
+  --color-gold-500: #c9a227;
+  --color-gold-400: #dbb84a;
+  --color-gold-300: #e8cc6e;
+
+  --color-blood-500: #8b2635;
+  --color-blood-400: #a83244;
+
+  --font-display: Georgia, 'Times New Roman', serif;
+  --font-body: system-ui, 'Segoe UI', Roboto, sans-serif;
+}
+
+@layer base {
+  html {
+    @apply h-full antialiased;
+  }
+
+  body {
+    @apply m-0 min-h-full bg-table-950 font-body text-table-200;
+  }
+
+  #root {
+    @apply min-h-full;
+  }
+
+  ::selection {
+    @apply bg-gold-500/30 text-table-100;
+  }
+
+  ::-webkit-scrollbar {
+    @apply w-2;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-table-900;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-table-600;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-table-500;
+  }
+}
+
+@keyframes dice-shake {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  20% {
+    transform: rotate(-4deg) scale(1.02);
+  }
+  40% {
+    transform: rotate(4deg) scale(0.98);
+  }
+  60% {
+    transform: rotate(-3deg);
+  }
+  80% {
+    transform: rotate(3deg);
+  }
+}
+
+.dice-shake {
+  animation: dice-shake 0.45s ease-in-out;
+}
+
+/* React Bits–inspired border glow (Magic Bento) */
+.glow-card {
+  position: relative;
+  border-radius: inherit;
+}
+
+.glow-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  padding: 2px;
+  border-radius: inherit;
+  background: radial-gradient(
+    var(--glow-radius) circle at var(--glow-x) var(--glow-y),
+    rgba(var(--glow-color), calc(var(--glow-intensity) * 0.65)) 0%,
+    rgba(var(--glow-color), calc(var(--glow-intensity) * 0.25)) 35%,
+    transparent 60%
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.25s ease;
+  z-index: 1;
+}
+
+.glow-card:hover {
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.35),
+    0 0 28px rgba(var(--glow-color), calc(var(--glow-intensity) * 0.15));
+}

@@ -1,0 +1,82 @@
+import type { NavModule } from '@/types'
+
+export const NAV_MODULES: NavModule[] = [
+  {
+    id: 'dice',
+    path: '/dice',
+    label: 'Dice',
+    description: 'Rolls, advantage/disadvantage & history',
+    icon: '🎲',
+    status: 'ready',
+    phase: 1,
+  },
+  {
+    id: 'bestiary',
+    path: '/bestiary',
+    label: 'Bestiary',
+    description: 'SRD monsters with stat blocks',
+    icon: '🐉',
+    status: 'ready',
+    phase: 2,
+  },
+  {
+    id: 'combat',
+    path: '/combat',
+    label: 'Combat',
+    description: 'Initiative, HP & conditions',
+    icon: '⚔️',
+    status: 'ready',
+    phase: 3,
+  },
+  {
+    id: 'session',
+    path: '/session',
+    label: 'Session',
+    description: 'Notes, secrets & campaign prep',
+    icon: '📜',
+    status: 'ready',
+    phase: 4,
+  },
+  {
+    id: 'compendium',
+    path: '/compendium/spells',
+    label: 'Compendium',
+    description: 'Spells, rules & SRD reference',
+    icon: '📚',
+    status: 'ready',
+    phase: 5,
+  },
+  {
+    id: 'characters',
+    path: '/characters/new',
+    label: 'Characters',
+    description: 'PC builder & official-style sheet',
+    icon: '🧙',
+    status: 'ready',
+    phase: 6,
+  },
+  {
+    id: 'generators',
+    path: '/generators',
+    label: 'Generators',
+    description: 'Names, loot, NPCs & encounters',
+    icon: '🎲',
+    status: 'ready',
+    phase: 7,
+  },
+  {
+    id: 'map',
+    path: '/map',
+    label: 'Battle map',
+    description: 'Upload maps, grid, tokens & fog',
+    icon: '🗺️',
+    status: 'ready',
+    phase: 8,
+  },
+]
+
+export const STATUS_LABELS: Record<NavModule['status'], string> = {
+  ready: 'Ready',
+  wip: 'In progress',
+  planned: 'Coming soon',
+}
