@@ -1,1 +1,0 @@
-import{n as e,t}from"./index-BeVfH9fb.js";var n=e();function r(){return(0,n.jsx)(`div`,{className:`mx-auto h-28 w-full max-w-xs`,children:(0,n.jsx)(t,{eyeColor:`#4ade80`,backgroundColor:`#0a0908`,intensity:1.8,glowIntensity:.45,scale:.75})})}export{r as CriticalAnimation};
