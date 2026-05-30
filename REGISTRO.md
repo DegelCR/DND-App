@@ -1392,7 +1392,7 @@ npm run preview
 
 - **Deploy automático:** push a `main` → workflow `.github/workflows/deploy-pages.yml`
 - **URL:** https://degelcr.github.io/DND-App/
-- **Activar Pages (una vez):** repo → Settings → Pages → Source: **GitHub Actions**
+- **Activar Pages (una vez, manual):** repo → **Settings** → **Pages** → **Build and deployment** → Source: **GitHub Actions**. Luego re-ejecutar el workflow fallido en la pestaña Actions (o hacer otro push).
 
 ### Asset Lottie (fumble) — paso manual
 

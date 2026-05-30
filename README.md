@@ -24,6 +24,8 @@ Open [http://localhost:5173](http://localhost:5173) in your browser. If that por
 
 Every push to `main` triggers [`.github/workflows/deploy-pages.yml`](./.github/workflows/deploy-pages.yml), which builds the app and publishes `dist/` to GitHub Pages.
 
+**One-time setup:** In the repo go to **Settings → Pages → Build and deployment** and set Source to **GitHub Actions**. Then re-run the failed workflow in **Actions** (or push again). Without this step the deploy job returns 404.
+
 | URL | Purpose |
 |-----|---------|
 | [degelcr.github.io/DND-App/](https://degelcr.github.io/DND-App/) | Public app |
