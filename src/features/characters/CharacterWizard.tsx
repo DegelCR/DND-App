@@ -183,10 +183,18 @@ export function CharacterWizard({ initialCharacter, onSave }: CharacterWizardPro
       variantHumanSkill = undefined;
       variantHumanFeat = undefined;
       halfElfVersatilitySkills = undefined;
-      bonuses = mergeRaceBonuses(
-        character.race?.raw as Parameters<typeof mergeRaceBonuses>[0],
-        sub as Parameters<typeof mergeRaceBonuses>[1],
-      );
+      const localDef = getLocalSubraceData(index);
+      if (localDef?.replaceBaseRaceBonuses) {
+        bonuses = mergeRaceBonuses(
+          undefined,
+          sub as Parameters<typeof mergeRaceBonuses>[1],
+        );
+      } else {
+        bonuses = mergeRaceBonuses(
+          character.race?.raw as Parameters<typeof mergeRaceBonuses>[0],
+          sub as Parameters<typeof mergeRaceBonuses>[1],
+        );
+      }
     }
 
     const nextC = {

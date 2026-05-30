@@ -6,6 +6,8 @@ import type { SubclassOption, SubraceOption } from "./types";
 export interface LocalSubraceDefinition extends SubraceOption {
   desc?: string;
   ability_bonuses?: { ability_score: { index: string }; bonus: number }[];
+  /** Use only subrace bonuses (e.g. Feral Tiefling replaces base ASI). */
+  replaceBaseRaceBonuses?: boolean;
   /** SRD trait indices (fetched from API when rendering) */
   traitIndices?: string[];
   /** PHB-only trait blurbs when not in the SRD API */
@@ -56,6 +58,19 @@ const subracesByRace: Record<string, SubraceOption[]> = {
   ],
   tiefling: [
     { index: "bloodline-of-asmodeus", name: "Bloodline of Asmodeus", source: "phb" },
+    { index: "bloodline-of-baalzebul", name: "Bloodline of Baalzebul", source: "mtof" },
+    { index: "bloodline-of-dispater", name: "Bloodline of Dispater", source: "mtof" },
+    { index: "bloodline-of-fierna", name: "Bloodline of Fierna", source: "mtof" },
+    { index: "bloodline-of-glasya", name: "Bloodline of Glasya", source: "mtof" },
+    { index: "bloodline-of-levistus", name: "Bloodline of Levistus", source: "mtof" },
+    { index: "bloodline-of-mammon", name: "Bloodline of Mammon", source: "mtof" },
+    { index: "bloodline-of-mephistopheles", name: "Bloodline of Mephistopheles", source: "mtof" },
+    { index: "bloodline-of-zariel", name: "Bloodline of Zariel", source: "mtof" },
+    { index: "feral-tiefling", name: "Feral Tiefling", source: "scag" },
+    { index: "devils-tongue-tiefling", name: "Devil's Tongue", source: "scag" },
+    { index: "hellfire-tiefling", name: "Hellfire", source: "scag" },
+    { index: "winged-tiefling", name: "Winged", source: "scag" },
+    { index: "abyssal-tiefling", name: "Abyssal Tiefling", source: "ua" },
   ],
 };
 
@@ -76,6 +91,32 @@ function dragonbornAncestry(
         desc: `Resistance to ${damage.toLowerCase()} damage.`,
       },
       { name: "Breath Weapon", desc: breath },
+    ],
+  };
+}
+
+function tieflingBloodline(
+  index: string,
+  name: string,
+  ability: string,
+  legacyName: string,
+  cantrip: string,
+  thirdLevel: string,
+  fifthLevel: string,
+  desc: string,
+  source: "phb" | "mtof",
+): LocalSubraceDefinition {
+  return {
+    index,
+    name,
+    source,
+    desc,
+    ability_bonuses: [{ ability_score: { index: ability }, bonus: 1 }],
+    localTraits: [
+      {
+        name: legacyName,
+        desc: `${cantrip} cantrip; ${thirdLevel} at 3rd level; ${fifthLevel} at 5th level (Charisma, once per long rest each).`,
+      },
     ],
   };
 }
@@ -324,16 +365,179 @@ const localSubraceData: Record<string, LocalSubraceDefinition> = {
       },
     ],
   },
-  "bloodline-of-asmodeus": {
-    index: "bloodline-of-asmodeus",
-    name: "Bloodline of Asmodeus",
-    source: "phb",
-    desc: "The tieflings connected to Nessus command the power of fire and darkness.",
+  "bloodline-of-asmodeus": tieflingBloodline(
+    "bloodline-of-asmodeus",
+    "Bloodline of Asmodeus",
+    "int",
+    "Infernal Legacy",
+    "Thaumaturgy",
+    "hellish rebuke (2nd-level)",
+    "darkness",
+    "The tieflings connected to Nessus command the power of fire and darkness.",
+    "phb",
+  ),
+  "bloodline-of-baalzebul": tieflingBloodline(
+    "bloodline-of-baalzebul",
+    "Bloodline of Baalzebul",
+    "int",
+    "Legacy of Maladomini",
+    "Thaumaturgy",
+    "ray of sickness (2nd-level)",
+    "crown of madness",
+    "Tieflings linked to Baalzebul can corrupt others both physically and psychically.",
+    "mtof",
+  ),
+  "bloodline-of-dispater": tieflingBloodline(
+    "bloodline-of-dispater",
+    "Bloodline of Dispater",
+    "dex",
+    "Legacy of Dis",
+    "Thaumaturgy",
+    "disguise self (2nd-level)",
+    "detect thoughts",
+    "Tieflings tied to Dispater excel as spies and infiltrators in the great city of Dis.",
+    "mtof",
+  ),
+  "bloodline-of-fierna": tieflingBloodline(
+    "bloodline-of-fierna",
+    "Bloodline of Fierna",
+    "wis",
+    "Legacy of Phlegethos",
+    "Friends",
+    "charm person (2nd-level)",
+    "suggestion",
+    "Fierna grants tieflings tied to her forceful, manipulative personalities.",
+    "mtof",
+  ),
+  "bloodline-of-glasya": tieflingBloodline(
+    "bloodline-of-glasya",
+    "Bloodline of Glasya",
+    "dex",
+    "Legacy of Malbolge",
+    "Minor illusion",
+    "disguise self (2nd-level)",
+    "invisibility (2nd-level)",
+    "Glasya grants magic useful for heists and covert schemes.",
+    "mtof",
+  ),
+  "bloodline-of-levistus": tieflingBloodline(
+    "bloodline-of-levistus",
+    "Bloodline of Levistus",
+    "con",
+    "Legacy of Stygia",
+    "Ray of frost",
+    "armor of agathys (2nd-level)",
+    "darkness",
+    "Levistus offers bargains to those who face inescapable doom.",
+    "mtof",
+  ),
+  "bloodline-of-mammon": tieflingBloodline(
+    "bloodline-of-mammon",
+    "Bloodline of Mammon",
+    "int",
+    "Legacy of Minauros",
+    "Mage hand",
+    "Tenser's floating disk (2nd-level)",
+    "arcane lock",
+    "Tieflings tied to Mammon excel at gathering and safeguarding wealth.",
+    "mtof",
+  ),
+  "bloodline-of-mephistopheles": tieflingBloodline(
+    "bloodline-of-mephistopheles",
+    "Bloodline of Mephistopheles",
+    "int",
+    "Legacy of Cania",
+    "Mage hand",
+    "burning hands (2nd-level)",
+    "flame blade (3rd-level)",
+    "Mephistopheles offers arcane power to those who entreat with him.",
+    "mtof",
+  ),
+  "bloodline-of-zariel": tieflingBloodline(
+    "bloodline-of-zariel",
+    "Bloodline of Zariel",
+    "str",
+    "Legacy of Avernus",
+    "Thaumaturgy",
+    "searing smite (2nd-level)",
+    "branding smite (3rd-level)",
+    "Tieflings with a blood tie to Zariel receive magical abilities that aid them in battle.",
+    "mtof",
+  ),
+  "feral-tiefling": {
+    index: "feral-tiefling",
+    name: "Feral Tiefling",
+    source: "scag",
+    replaceBaseRaceBonuses: true,
+    desc: "Some tieflings resemble their fiendish ancestors more strongly — replaces the standard ability score increase.",
+    ability_bonuses: [
+      { ability_score: { index: "int" }, bonus: 1 },
+      { ability_score: { index: "dex" }, bonus: 2 },
+    ],
+    localTraits: [
+      {
+        name: "Feral",
+        desc: "Your Intelligence score increases by 1 and your Dexterity score increases by 2 (replaces Charisma +2).",
+      },
+    ],
+  },
+  "devils-tongue-tiefling": {
+    index: "devils-tongue-tiefling",
+    name: "Devil's Tongue",
+    source: "scag",
+    desc: "A variant legacy of manipulation and mockery — replaces Infernal Legacy.",
     ability_bonuses: [{ ability_score: { index: "int" }, bonus: 1 }],
     localTraits: [
       {
-        name: "Infernal Legacy",
-        desc: "Thaumaturgy cantrip; hellish rebuke at 3rd level; darkness at 5th level (Charisma, once per long rest each).",
+        name: "Devil's Tongue",
+        desc: "Vicious mockery cantrip; charm person at 3rd level; enthrall at 5th level (Charisma, once per long rest each).",
+      },
+    ],
+  },
+  "hellfire-tiefling": {
+    index: "hellfire-tiefling",
+    name: "Hellfire",
+    source: "scag",
+    desc: "Burning hands instead of hellish rebuke — replaces the hellish rebuke portion of Infernal Legacy.",
+    ability_bonuses: [{ ability_score: { index: "int" }, bonus: 1 }],
+    localTraits: [
+      {
+        name: "Hellfire",
+        desc: "Thaumaturgy cantrip; burning hands at 3rd level (replaces hellish rebuke); darkness at 5th level (Charisma, once per long rest each).",
+      },
+    ],
+  },
+  "winged-tiefling": {
+    index: "winged-tiefling",
+    name: "Winged",
+    source: "scag",
+    desc: "Bat-like wings replace Infernal Legacy spellcasting.",
+    ability_bonuses: [{ ability_score: { index: "int" }, bonus: 1 }],
+    localTraits: [
+      {
+        name: "Winged",
+        desc: "You have a flying speed of 30 feet while you aren't wearing heavy armor (replaces Infernal Legacy).",
+      },
+    ],
+  },
+  "abyssal-tiefling": {
+    index: "abyssal-tiefling",
+    name: "Abyssal Tiefling",
+    source: "ua",
+    desc: "Unearthed Arcana — tieflings whose bloodline traces to the demons of the Abyss.",
+    ability_bonuses: [{ ability_score: { index: "con" }, bonus: 1 }],
+    localTraits: [
+      {
+        name: "Abyssal Arcana",
+        desc: "After each long rest, roll on the Abyssal Arcana table for random cantrips and spells (1st at 3rd level, 2nd at 5th level).",
+      },
+      {
+        name: "Abyssal Fortitude",
+        desc: "Your hit point maximum increases by half your level (minimum 1).",
+      },
+      {
+        name: "Languages",
+        desc: "You can speak, read, and write Abyssal in addition to Common and Infernal.",
       },
     ],
   },

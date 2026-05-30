@@ -16,7 +16,7 @@ export interface RaceSelection {
 export interface SubraceOption {
   index: string;
   name: string;
-  source?: "srd" | "phb";
+  source?: "srd" | "phb" | "mtof" | "scag" | "ua";
 }
 
 export interface ClassSelection {
