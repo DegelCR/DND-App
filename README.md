@@ -2,6 +2,10 @@
 
 Tabletop toolkit for **D&D 5e** sessions — a hobby project. Everything is saved **locally** in your browser (IndexedDB). No server, no cost.
 
+**Live demo:** [https://degelcr.github.io/DND-App/](https://degelcr.github.io/DND-App/)
+
+**Repository:** [https://github.com/DegelCR/DND-App](https://github.com/DegelCR/DND-App)
+
 ## Requirements
 
 - Node.js 18+
@@ -16,11 +20,31 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173) in your browser. If that port is busy, Vite may use **5174** — check the terminal output.
 
+### GitHub Pages (production)
+
+Every push to `main` triggers [`.github/workflows/deploy-pages.yml`](./.github/workflows/deploy-pages.yml), which builds the app and publishes `dist/` to GitHub Pages.
+
+| URL | Purpose |
+|-----|---------|
+| [degelcr.github.io/DND-App/](https://degelcr.github.io/DND-App/) | Public app |
+| `/DND-App/` base path | Set automatically in CI via `GITHUB_REPOSITORY` in `vite.config.ts` |
+| `404.html` | Copy of `index.html` so client-side routes work on refresh |
+
+To preview the production base path locally:
+
+```bash
+# PowerShell
+$env:GITHUB_REPOSITORY = "DegelCR/DND-App"
+npm run build
+npm run preview
+# → http://localhost:4173/DND-App/
+```
+
 ## Current status (May 2026)
 
 **Phases 0–8 complete:** Dice, Bestiary, Combat, Session notes, Compendium, Characters, Generators, **Battle map**.
 
-**Roadmap MVP done.** Next: backlog (PWA, deploy, add-to-combat, etc.).
+**Roadmap MVP done.** Deployed on GitHub Pages. Next backlog: PWA, add-to-combat, etc.
 
 ## Scripts
 

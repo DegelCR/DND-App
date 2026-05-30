@@ -8,8 +8,10 @@ Documento de seguimiento detallado del desarrollo de la aplicación de mesa para
 | **Ubicación** | `c:\Users\Fran\Desktop\DND App` |
 | **Inicio** | 29 de mayo de 2026 |
 | **Enfoque** | Hobby, coste $0, local-first |
-| **Estado actual** | Fases 0–8 ✅ · MVP roadmap completo |
-| **Última actualización** | 29 de mayo de 2026 |
+| **Estado actual** | Fases 0–8 ✅ · MVP roadmap completo · GitHub Pages |
+| **Última actualización** | 30 de mayo de 2026 |
+| **Repo** | [github.com/DegelCR/DND-App](https://github.com/DegelCR/DND-App) |
+| **Demo online** | [degelcr.github.io/DND-App](https://degelcr.github.io/DND-App/) |
 
 ---
 
@@ -118,6 +120,23 @@ Documento de seguimiento detallado del desarrollo de la aplicación de mesa para
 - API SRD gratuita o JSON offline
 - Sin backend en la nube al inicio
 - Deploy futuro opcional en GitHub Pages (gratis)
+
+---
+
+### Sesión — Git + GitHub Pages (30 may 2026)
+
+**Resultado:**
+
+- Repo público: [DegelCR/DND-App](https://github.com/DegelCR/DND-App) (rama `main`)
+- Primer commit: MVP fases 0–8 + React Bits
+- **GitHub Pages** configurado con GitHub Actions:
+  - Workflow `.github/workflows/deploy-pages.yml` — build en cada push a `main`
+  - `vite.config.ts` — `base: '/DND-App/'` en CI (vía `GITHUB_REPOSITORY`)
+  - `App.tsx` — `BrowserRouter basename={import.meta.env.BASE_URL}`
+  - `404.html` — copia de `index.html` para rutas SPA al refrescar
+- URL pública: [https://degelcr.github.io/DND-App/](https://degelcr.github.io/DND-App/)
+
+**Estado:** ✅ Infra de deploy lista. El primer deploy corre al pushear el workflow.
 
 ---
 
@@ -362,8 +381,8 @@ Referencia: [Sly Flourish — Lazy GM Resource Document](https://slyflourish.com
 | Persistencia | Dexie (IndexedDB) | $0 |
 | Datos SRD | dnd5eapi.co o JSON local | $0 |
 | Animaciones | lottie-react (fumble, lazy) | $0 |
-| Hosting inicial | localhost (sin deploy) | $0 |
-| Deploy futuro | GitHub Pages | $0 |
+| Hosting local | localhost (`npm run dev`) | $0 |
+| Hosting público | GitHub Pages | $0 |
 
 ### Cuándo SÍ costaría dinero (evitable al inicio)
 - Dominio propio → usar `usuario.github.io`
@@ -1095,7 +1114,7 @@ El código base vive en `C:\Users\Fran\Desktop\pagina web` (Next.js, `HANDOFF-AG
 │  UI lang:  English                      │
 │  Datos:    SRD API (bestiario, compendio, personajes) │
 │  Ficha PC: CSS pergamino scoped (.character-module) │
-│  Deploy:   GitHub Pages (futuro)        │
+│  Deploy:   GitHub Pages (Actions → main) │
 └─────────────────────────────────────────┘
 ```
 
@@ -1355,6 +1374,26 @@ npm run preview
 npm run lint
 ```
 
+### GitHub Pages
+
+```bash
+# Clonar y desarrollar
+git clone https://github.com/DegelCR/DND-App.git
+cd DND-App
+npm install
+npm run dev
+
+# Simular build de producción (misma base que Pages)
+# PowerShell:
+$env:GITHUB_REPOSITORY = "DegelCR/DND-App"
+npm run build
+npm run preview
+```
+
+- **Deploy automático:** push a `main` → workflow `.github/workflows/deploy-pages.yml`
+- **URL:** https://degelcr.github.io/DND-App/
+- **Activar Pages (una vez):** repo → Settings → Pages → Source: **GitHub Actions**
+
 ### Asset Lottie (fumble) — paso manual
 
 1. Abrir https://lottiefiles.com/free-animation/devil-d20-fumble-rEH73ips20
@@ -1391,8 +1430,8 @@ npm run lint
 - [x] UI en inglés
 - [x] Integración Lottie (código)
 - [ ] Asset `devil-d20-fumble.json` descargado
-- [ ] Git inicializado
-- [ ] Deploy GitHub Pages
+- [x] Git inicializado + push a GitHub
+- [x] Deploy GitHub Pages (workflow + Vite base)
 - [x] Cache SRD offline
 - [ ] PWA (instalable en móvil)
 
@@ -1408,7 +1447,6 @@ Roadmap de fases completado. Prioridades sugeridas:
 - Animación nat 20 (Lottie)
 - Modo PWA para tablet en mesa física
 - **Homebrew & import externo** (ver §24.1)
-- Git + deploy GitHub Pages (cuando convenga)
 
 ### Nota: Spotify / música ambiente
 

@@ -12,7 +12,7 @@ import { MapPage } from '@/features/map/MapPage'
 
 export function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       <Routes>
         <Route element={<AppLayout />}>
           <Route index element={<HomePage />} />
