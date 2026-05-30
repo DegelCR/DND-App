@@ -24,7 +24,13 @@ Open [http://localhost:5173](http://localhost:5173) in your browser. If that por
 
 Every push to `main` triggers [`.github/workflows/deploy-pages.yml`](./.github/workflows/deploy-pages.yml), which builds the app and publishes `dist/` to GitHub Pages.
 
-**One-time setup:** In the repo go to **Settings → Pages → Build and deployment** and set Source to **GitHub Actions**. Then re-run the failed workflow in **Actions** (or push again). Without this step the deploy job returns 404.
+**One-time setup (required):** GitHub Pages is **not enabled by default**. Open [Settings → Pages](https://github.com/DegelCR/DND-App/settings/pages) and configure:
+
+1. **Build and deployment** → **Source:** Deploy from a branch  
+2. **Branch:** `gh-pages` / **`/ (root)`**  
+3. Click **Save** — the site appears in 1–2 minutes at the URL below
+
+Every push to `main` rebuilds and updates the `gh-pages` branch automatically.
 
 | URL | Purpose |
 |-----|---------|

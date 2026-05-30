@@ -1390,9 +1390,9 @@ npm run build
 npm run preview
 ```
 
-- **Deploy automático:** push a `main` → workflow `.github/workflows/deploy-pages.yml`
+- **Deploy automático:** push a `main` → workflow publica en rama `gh-pages`
 - **URL:** https://degelcr.github.io/DND-App/
-- **Activar Pages (una vez, manual):** repo → **Settings** → **Pages** → **Build and deployment** → Source: **GitHub Actions**. Luego re-ejecutar el workflow fallido en la pestaña Actions (o hacer otro push).
+- **Activar Pages (una vez, obligatorio):** [Settings → Pages](https://github.com/DegelCR/DND-App/settings/pages) → Source: **Deploy from a branch** → Branch: **`gh-pages`** → **`/ (root)`** → Save. Sin este paso la URL da 404 aunque el código esté subido.
 
 ### Asset Lottie (fumble) — paso manual
 
