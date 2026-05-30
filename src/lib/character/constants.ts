@@ -11,6 +11,27 @@ export const ABILITIES = [
 
 export const STANDARD_ARRAY = [15, 14, 13, 12, 10, 8]
 
+export const SKILL_NAMES = [
+  'Acrobatics',
+  'Animal Handling',
+  'Arcana',
+  'Athletics',
+  'Deception',
+  'History',
+  'Insight',
+  'Intimidation',
+  'Investigation',
+  'Medicine',
+  'Nature',
+  'Perception',
+  'Performance',
+  'Persuasion',
+  'Religion',
+  'Sleight of Hand',
+  'Stealth',
+  'Survival',
+] as const
+
 export const STEPS = [
   { id: 1, label: 'Basics' },
   { id: 2, label: 'Race' },

@@ -230,6 +230,12 @@ a {
   color: var(--gold);
 }
 
+.sub-block-hint {
+  margin: -0.35rem 0 0.75rem;
+  font-size: 0.8rem;
+  color: var(--ink-muted);
+}
+
 /* Form fields */
 .field-grid {
   display: grid;

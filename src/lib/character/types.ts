@@ -9,7 +9,14 @@ export interface ApiRef {
 export interface RaceSelection {
   index: string;
   name: string;
+  subraces?: SubraceOption[];
   raw?: Record<string, unknown>;
+}
+
+export interface SubraceOption {
+  index: string;
+  name: string;
+  source?: "srd" | "phb";
 }
 
 export interface ClassSelection {
@@ -75,6 +82,12 @@ export interface Character {
   personality: string;
   skillChoices: Record<string, string[]>;
   skillProficiencies: string[];
+  /** Variant Human: one skill proficiency from racial trait */
+  variantHumanSkill?: string;
+  /** Variant Human: chosen feat name (reference only) */
+  variantHumanFeat?: string;
+  /** Half-Elf Skill Versatility: two skill proficiencies */
+  halfElfVersatilitySkills?: string[];
   proficiencyNotes: string;
   selectedSpells: SelectedSpells;
   spellNotes: string;

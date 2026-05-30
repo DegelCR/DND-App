@@ -59,6 +59,48 @@ export function mergeRaceBonuses(
   return bonuses
 }
 
+/** +1 ability picks chosen by the player (half-elf, variant human). */
+export function getFlexibleAbilityPicks(
+  bonuses: Partial<Record<AbilityKey, number>>,
+  fixed: Partial<Record<AbilityKey, number>> = {},
+): AbilityKey[] {
+  const picks: AbilityKey[] = []
+  for (const { key } of ABILITIES) {
+    const total = bonuses[key] ?? 0
+    const base = fixed[key] ?? 0
+    if (total > base) picks.push(key)
+  }
+  return picks
+}
+
+export function applyFlexibleAbilityPicks(
+  raceIndex: string | undefined,
+  subraceIndex: string | undefined,
+  raceData: Record<string, unknown> | undefined,
+  subraceData: Record<string, unknown> | undefined,
+  picks: AbilityKey[],
+): Partial<Record<AbilityKey, number>> {
+  if (raceIndex === 'half-elf') {
+    const next: Partial<Record<AbilityKey, number>> = { cha: 2 }
+    for (const key of picks.slice(0, 2)) next[key] = (next[key] || 0) + 1
+    return next
+  }
+  if (raceIndex === 'human' && subraceIndex === 'variant-human') {
+    const next: Partial<Record<AbilityKey, number>> = {}
+    for (const key of picks.slice(0, 2)) next[key] = 1
+    return next
+  }
+  return mergeRaceBonuses(
+    raceData as Parameters<typeof mergeRaceBonuses>[0],
+    subraceData as Parameters<typeof mergeRaceBonuses>[1],
+  )
+}
+
+export function initialRaceBonuses(raceIndex: string, raceData: Record<string, unknown>) {
+  if (raceIndex === 'half-elf') return { cha: 2 } as Partial<Record<AbilityKey, number>>
+  return mergeRaceBonuses(raceData as Parameters<typeof mergeRaceBonuses>[0])
+}
+
 export function getProficiencyBonus(level: number) {
   return Math.min(6, Math.max(2, Math.ceil((level || 1) / 4) + 1))
 }

@@ -1,7 +1,389 @@
 /**
  * Subclases y trasfondos ampliados (nombres de referencia PHB + SRD).
  */
-import type { SubclassOption } from "./types";
+import type { SubclassOption, SubraceOption } from "./types";
+
+export interface LocalSubraceDefinition extends SubraceOption {
+  desc?: string;
+  ability_bonuses?: { ability_score: { index: string }; bonus: number }[];
+  /** SRD trait indices (fetched from API when rendering) */
+  traitIndices?: string[];
+  /** PHB-only trait blurbs when not in the SRD API */
+  localTraits?: { name: string; desc: string }[];
+}
+
+const subracesByRace: Record<string, SubraceOption[]> = {
+  dwarf: [
+    { index: "hill-dwarf", name: "Hill Dwarf", source: "srd" },
+    { index: "mountain-dwarf", name: "Mountain Dwarf", source: "phb" },
+  ],
+  elf: [
+    { index: "high-elf", name: "High Elf", source: "srd" },
+    { index: "wood-elf", name: "Wood Elf", source: "phb" },
+    { index: "drow", name: "Drow", source: "phb" },
+  ],
+  halfling: [
+    { index: "lightfoot-halfling", name: "Lightfoot Halfling", source: "srd" },
+    { index: "stout-halfling", name: "Stout Halfling", source: "phb" },
+  ],
+  gnome: [
+    { index: "rock-gnome", name: "Rock Gnome", source: "srd" },
+    { index: "forest-gnome", name: "Forest Gnome", source: "phb" },
+  ],
+  dragonborn: [
+    { index: "dragonborn-black", name: "Black Dragon", source: "phb" },
+    { index: "dragonborn-blue", name: "Blue Dragon", source: "phb" },
+    { index: "dragonborn-brass", name: "Brass Dragon", source: "phb" },
+    { index: "dragonborn-bronze", name: "Bronze Dragon", source: "phb" },
+    { index: "dragonborn-copper", name: "Copper Dragon", source: "phb" },
+    { index: "dragonborn-gold", name: "Gold Dragon", source: "phb" },
+    { index: "dragonborn-green", name: "Green Dragon", source: "phb" },
+    { index: "dragonborn-red", name: "Red Dragon", source: "phb" },
+    { index: "dragonborn-silver", name: "Silver Dragon", source: "phb" },
+    { index: "dragonborn-white", name: "White Dragon", source: "phb" },
+  ],
+  human: [
+    { index: "standard-human", name: "Standard Human", source: "phb" },
+    { index: "variant-human", name: "Variant Human", source: "phb" },
+  ],
+  "half-elf": [
+    { index: "half-elf-skills", name: "Skill Versatility", source: "srd" },
+    { index: "half-elf-elf-weapons", name: "Elf Weapon Training", source: "phb" },
+    { index: "half-elf-cantrip", name: "Wizard Cantrip", source: "phb" },
+    { index: "half-elf-fleet-of-foot", name: "Fleet of Foot", source: "phb" },
+    { index: "half-elf-mask-of-the-wild", name: "Mask of the Wild", source: "phb" },
+    { index: "half-elf-drow-magic", name: "Drow Magic", source: "phb" },
+  ],
+  tiefling: [
+    { index: "bloodline-of-asmodeus", name: "Bloodline of Asmodeus", source: "phb" },
+  ],
+};
+
+function dragonbornAncestry(
+  color: string,
+  damage: string,
+  breath: string,
+): LocalSubraceDefinition {
+  const key = color.toLowerCase();
+  return {
+    index: `dragonborn-${key}`,
+    name: `${color} Dragon`,
+    source: "phb",
+    desc: `Your draconic ancestry is ${color.toLowerCase()}.`,
+    localTraits: [
+      {
+        name: "Damage Resistance",
+        desc: `Resistance to ${damage.toLowerCase()} damage.`,
+      },
+      { name: "Breath Weapon", desc: breath },
+    ],
+  };
+}
+
+/** Full data for PHB subraces not served by the SRD API */
+const localSubraceData: Record<string, LocalSubraceDefinition> = {
+  "mountain-dwarf": {
+    index: "mountain-dwarf",
+    name: "Mountain Dwarf",
+    source: "phb",
+    desc: "As a mountain dwarf, you are strong and hardy, accustomed to a difficult life in rugged terrain.",
+    ability_bonuses: [{ ability_score: { index: "str" }, bonus: 2 }],
+    localTraits: [
+      {
+        name: "Dwarven Armor Training",
+        desc: "Proficiency with light and medium armor.",
+      },
+    ],
+  },
+  "wood-elf": {
+    index: "wood-elf",
+    name: "Wood Elf",
+    source: "phb",
+    desc: "As a wood elf, you have keen senses and intuition, and your fleet feet carry you quickly through wild lands.",
+    ability_bonuses: [{ ability_score: { index: "wis" }, bonus: 1 }],
+    traitIndices: ["elf-weapon-training"],
+    localTraits: [
+      {
+        name: "Fleet of Foot",
+        desc: "Your base walking speed increases to 35 feet.",
+      },
+      {
+        name: "Mask of the Wild",
+        desc: "You can attempt to hide when lightly obscured by natural phenomena.",
+      },
+    ],
+  },
+  drow: {
+    index: "drow",
+    name: "Drow",
+    source: "phb",
+    desc: "As a drow, you are infused with the magic of the Underdark, an elite portion of a subterranean society.",
+    ability_bonuses: [{ ability_score: { index: "cha" }, bonus: 1 }],
+    localTraits: [
+      {
+        name: "Superior Darkvision",
+        desc: "Your darkvision has a radius of 120 feet.",
+      },
+      {
+        name: "Sunlight Sensitivity",
+        desc: "Disadvantage on attack rolls and Perception when you or your target are in direct sunlight.",
+      },
+      {
+        name: "Drow Magic",
+        desc: "You know the dancing lights cantrip; at 3rd level faerie fire, at 5th level darkness (Charisma).",
+      },
+      {
+        name: "Drow Weapon Training",
+        desc: "Proficiency with rapiers, shortswords, and hand crossbows.",
+      },
+    ],
+  },
+  "stout-halfling": {
+    index: "stout-halfling",
+    name: "Stout Halfling",
+    source: "phb",
+    desc: "As a stout halfling, you are hardier than average and have some resistance to poison.",
+    ability_bonuses: [{ ability_score: { index: "con" }, bonus: 1 }],
+    localTraits: [
+      {
+        name: "Stout Resilience",
+        desc: "Advantage on saving throws against poison, and resistance to poison damage.",
+      },
+    ],
+  },
+  "forest-gnome": {
+    index: "forest-gnome",
+    name: "Forest Gnome",
+    source: "phb",
+    desc: "As a forest gnome, you have a knack for illusion and an affinity for small woodland creatures.",
+    ability_bonuses: [{ ability_score: { index: "dex" }, bonus: 1 }],
+    localTraits: [
+      {
+        name: "Natural Illusionist",
+        desc: "You know the minor illusion cantrip (Intelligence).",
+      },
+      {
+        name: "Speak with Small Beasts",
+        desc: "Through sounds and gestures, you can communicate simple ideas with Small or smaller beasts.",
+      },
+    ],
+  },
+  "dragonborn-black": dragonbornAncestry(
+    "Black",
+    "Acid",
+    "5 by 30 ft. line (Dexterity save).",
+  ),
+  "dragonborn-blue": dragonbornAncestry(
+    "Blue",
+    "Lightning",
+    "5 by 30 ft. line (Dexterity save).",
+  ),
+  "dragonborn-brass": dragonbornAncestry(
+    "Brass",
+    "Fire",
+    "5 by 30 ft. line (Dexterity save).",
+  ),
+  "dragonborn-bronze": dragonbornAncestry(
+    "Bronze",
+    "Lightning",
+    "5 by 30 ft. line (Dexterity save).",
+  ),
+  "dragonborn-copper": dragonbornAncestry(
+    "Copper",
+    "Acid",
+    "5 by 30 ft. line (Dexterity save).",
+  ),
+  "dragonborn-gold": dragonbornAncestry(
+    "Gold",
+    "Fire",
+    "15 ft. cone (Dexterity save).",
+  ),
+  "dragonborn-green": dragonbornAncestry(
+    "Green",
+    "Poison",
+    "15 ft. cone (Constitution save).",
+  ),
+  "dragonborn-red": dragonbornAncestry(
+    "Red",
+    "Fire",
+    "15 ft. cone (Dexterity save).",
+  ),
+  "dragonborn-silver": dragonbornAncestry(
+    "Silver",
+    "Cold",
+    "15 ft. cone (Constitution save).",
+  ),
+  "dragonborn-white": dragonbornAncestry(
+    "White",
+    "Cold",
+    "15 ft. cone (Constitution save).",
+  ),
+  "standard-human": {
+    index: "standard-human",
+    name: "Standard Human",
+    source: "phb",
+    desc: "Your ability scores each increase by 1.",
+    localTraits: [
+      {
+        name: "Ability Score Increase",
+        desc: "+1 to all ability scores.",
+      },
+    ],
+  },
+  "variant-human": {
+    index: "variant-human",
+    name: "Variant Human",
+    source: "phb",
+    desc: "Replaces the standard +1 to all abilities with two +1 ability choices, one skill, and one feat.",
+    localTraits: [
+      {
+        name: "Ability Score Increase",
+        desc: "Two different ability scores of your choice increase by 1.",
+      },
+      {
+        name: "Skills",
+        desc: "You gain proficiency in one skill of your choice.",
+      },
+      {
+        name: "Feat",
+        desc: "You gain one feat of your choice.",
+      },
+    ],
+  },
+  "half-elf-skills": {
+    index: "half-elf-skills",
+    name: "Skill Versatility",
+    source: "srd",
+    desc: "You gain proficiency in two skills of your choice.",
+    traitIndices: ["skill-versatility"],
+    localTraits: [
+      {
+        name: "Skill Versatility",
+        desc: "You gain proficiency in two skills of your choice.",
+      },
+    ],
+  },
+  "half-elf-elf-weapons": {
+    index: "half-elf-elf-weapons",
+    name: "Elf Weapon Training",
+    source: "phb",
+    desc: "High or wood elf heritage — weapon proficiencies from elven tradition.",
+    traitIndices: ["elf-weapon-training"],
+    localTraits: [
+      {
+        name: "Elf Weapon Training",
+        desc: "Proficiency with longsword, shortsword, shortbow, and longbow.",
+      },
+    ],
+  },
+  "half-elf-cantrip": {
+    index: "half-elf-cantrip",
+    name: "Wizard Cantrip",
+    source: "phb",
+    desc: "High elf heritage — one wizard cantrip of your choice.",
+    localTraits: [
+      {
+        name: "Cantrip",
+        desc: "You know one cantrip of your choice from the wizard spell list (Intelligence).",
+      },
+    ],
+  },
+  "half-elf-fleet-of-foot": {
+    index: "half-elf-fleet-of-foot",
+    name: "Fleet of Foot",
+    source: "phb",
+    desc: "Wood elf heritage — increased walking speed.",
+    localTraits: [
+      {
+        name: "Fleet of Foot",
+        desc: "Your base walking speed increases to 35 feet.",
+      },
+    ],
+  },
+  "half-elf-mask-of-the-wild": {
+    index: "half-elf-mask-of-the-wild",
+    name: "Mask of the Wild",
+    source: "phb",
+    desc: "Wood elf heritage — hide in natural obscurement.",
+    localTraits: [
+      {
+        name: "Mask of the Wild",
+        desc: "You can attempt to hide when lightly obscured by foliage, rain, snow, mist, and similar natural phenomena.",
+      },
+    ],
+  },
+  "half-elf-drow-magic": {
+    index: "half-elf-drow-magic",
+    name: "Drow Magic",
+    source: "phb",
+    desc: "Dark elf heritage — innate drow spellcasting.",
+    localTraits: [
+      {
+        name: "Drow Magic",
+        desc: "Dancing lights cantrip; faerie fire at 3rd level; darkness at 5th level (Charisma, once per long rest each).",
+      },
+    ],
+  },
+  "bloodline-of-asmodeus": {
+    index: "bloodline-of-asmodeus",
+    name: "Bloodline of Asmodeus",
+    source: "phb",
+    desc: "The tieflings connected to Nessus command the power of fire and darkness.",
+    ability_bonuses: [{ ability_score: { index: "int" }, bonus: 1 }],
+    localTraits: [
+      {
+        name: "Infernal Legacy",
+        desc: "Thaumaturgy cantrip; hellish rebuke at 3rd level; darkness at 5th level (Charisma, once per long rest each).",
+      },
+    ],
+  },
+};
+
+export function getSubracesForRace(raceIndex: string) {
+  return subracesByRace[raceIndex] || [];
+}
+
+export function getLocalSubraceData(index: string): LocalSubraceDefinition | null {
+  return localSubraceData[index] ?? null;
+}
+
+export function localSubraceToRaw(def: LocalSubraceDefinition): Record<string, unknown> {
+  return {
+    index: def.index,
+    name: def.name,
+    desc: def.desc,
+    ability_bonuses: def.ability_bonuses ?? [],
+    racial_traits: (def.traitIndices ?? []).map((idx) => ({
+      index: idx,
+      name: idx.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+    })),
+    localTraits: def.localTraits ?? [],
+    source: def.source ?? "phb",
+  };
+}
+
+export function mergeSubraces(
+  apiSubs: { index: string; name: string }[] | undefined,
+  raceIndex: string,
+): SubraceOption[] {
+  const extra = getSubracesForRace(raceIndex);
+  const seen = new Set<string>();
+  const merged: SubraceOption[] = [];
+
+  for (const s of apiSubs || []) {
+    if (!seen.has(s.index)) {
+      seen.add(s.index);
+      merged.push({ ...s, source: "srd" });
+    }
+  }
+  for (const s of extra) {
+    if (!seen.has(s.index)) {
+      seen.add(s.index);
+      merged.push(s);
+    }
+  }
+  return merged;
+}
 
 const subclassesByClass: Record<string, SubclassOption[]> = {
     barbarian: [

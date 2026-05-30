@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
-import type { Character } from "@/lib/character/types";
-import { STEPS, ABILITIES, STANDARD_ARRAY, ALIGNMENTS } from '@/lib/character/constants'
+import type { Character, AbilityKey } from "@/lib/character/types";
+import { STEPS, ABILITIES, STANDARD_ARRAY, ALIGNMENTS, SKILL_NAMES } from '@/lib/character/constants'
 import {
   defaultCharacter,
   computeFinalScores,
   mergeRaceBonuses,
+  initialRaceBonuses,
+  applyFlexibleAbilityPicks,
+  getFlexibleAbilityPicks,
   abilityModifier,
   formatModifier,
   getProficiencyBonus,
@@ -22,7 +25,7 @@ import {
   getBackground,
   extractSkillsFromList,
 } from "@/lib/character/api";
-import { listBackgrounds, mergeSubclasses, getBackground as getLocalBg } from "@/lib/character/extra-data";
+import { listBackgrounds, mergeSubclasses, mergeSubraces, getBackground as getLocalBg, getLocalSubraceData, localSubraceToRaw } from "@/lib/character/extra-data";
 import { validateStep } from '@/lib/character/validation'
 import { ProficienciesPanel } from './components/ProficienciesPanel'
 import { SpellsPanel } from './components/SpellsPanel'
@@ -64,6 +67,18 @@ export function CharacterWizard({ initialCharacter, onSave }: CharacterWizardPro
     setBackgrounds(listBackgrounds())
   }, [initialCharacter])
 
+  useEffect(() => {
+    if (!character.race?.raw || character.race.subraces?.length) return
+    const apiSubs = (character.race.raw.subraces as { index: string; name: string }[]) || []
+    const merged = mergeSubraces(apiSubs, character.race.index)
+    if (merged.length === 0) return
+    setCharacter((prev) =>
+      prev.race
+        ? { ...prev, race: { ...prev.race, subraces: merged } }
+        : prev,
+    )
+  }, [character.race?.index, character.race?.raw, character.race?.subraces?.length])
+
   const showToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(""), 2800);
@@ -84,60 +99,166 @@ export function CharacterWizard({ initialCharacter, onSave }: CharacterWizardPro
 
   const selectRace = async (index: string) => {
     const data = await getRace(index);
+    const apiSubs = (data.subraces as { index: string; name: string }[]) || [];
+    const mergedSubs = mergeSubraces(apiSubs, index);
+    const raceBonuses = initialRaceBonuses(index, data);
     const nextC: Character = {
       ...character,
-      race: { index: String(data.index), name: String(data.name), raw: data },
+      race: {
+        index: String(data.index),
+        name: String(data.name),
+        subraces: mergedSubs,
+        raw: data,
+      },
       subrace: null,
-      raceBonuses: mergeRaceBonuses(
-        data as Parameters<typeof mergeRaceBonuses>[0],
-       undefined
-      ),
+      raceBonuses,
+      variantHumanSkill: undefined,
+      variantHumanFeat: undefined,
+      halfElfVersatilitySkills: undefined,
     };
-    if ((data.subraces as { index: string; name: string }[])?.length) {
-      persist(nextC);
-    } else {
-      persist({ ...nextC, raceBonuses: mergeRaceBonuses(data as Parameters<typeof mergeRaceBonuses>[0], undefined) });
-    }
+    persist(nextC);
     await renderRaceDetail(data, null, nextC.raceBonuses);
   };
 
   const selectSubrace = async (index: string) => {
-    const sub = await getSubrace(index);
-    const bonuses = mergeRaceBonuses(
-      character.race?.raw as Parameters<typeof mergeRaceBonuses>[0],
-      sub as Parameters<typeof mergeRaceBonuses>[1]
-    );
+    const meta = character.race?.subraces?.find((s) => s.index === index);
+    let sub: Record<string, unknown>;
+
+    if (meta?.source === "srd" && getLocalSubraceData(index) === null) {
+      try {
+        sub = await getSubrace(index);
+      } catch {
+        const local = getLocalSubraceData(index);
+        if (!local) return;
+        sub = localSubraceToRaw(local);
+      }
+    } else {
+      const local = getLocalSubraceData(index);
+      if (local) {
+        sub = localSubraceToRaw(local);
+      } else {
+        try {
+          sub = await getSubrace(index);
+        } catch {
+          return;
+        }
+      }
+    }
+
+    const raceIndex = character.race?.index;
+    let bonuses: Character["raceBonuses"];
+    let variantHumanSkill = character.variantHumanSkill;
+    let variantHumanFeat = character.variantHumanFeat;
+    let halfElfVersatilitySkills = character.halfElfVersatilitySkills;
+
+    if (index === "standard-human") {
+      bonuses = mergeRaceBonuses(
+        character.race?.raw as Parameters<typeof mergeRaceBonuses>[0],
+        undefined,
+      );
+      variantHumanSkill = undefined;
+      variantHumanFeat = undefined;
+    } else if (index === "variant-human") {
+      bonuses = applyFlexibleAbilityPicks(
+        raceIndex,
+        index,
+        character.race?.raw,
+        sub,
+        getFlexibleAbilityPicks(character.raceBonuses),
+      );
+      halfElfVersatilitySkills = undefined;
+    } else if (raceIndex === "half-elf") {
+      if (index !== "half-elf-skills") halfElfVersatilitySkills = undefined;
+      else halfElfVersatilitySkills = ["", ""];
+      variantHumanSkill = undefined;
+      variantHumanFeat = undefined;
+      bonuses = applyFlexibleAbilityPicks(
+        raceIndex,
+        index,
+        character.race?.raw,
+        sub,
+        getFlexibleAbilityPicks(character.raceBonuses, { cha: 2 }),
+      );
+    } else {
+      variantHumanSkill = undefined;
+      variantHumanFeat = undefined;
+      halfElfVersatilitySkills = undefined;
+      bonuses = mergeRaceBonuses(
+        character.race?.raw as Parameters<typeof mergeRaceBonuses>[0],
+        sub as Parameters<typeof mergeRaceBonuses>[1],
+      );
+    }
+
     const nextC = {
       ...character,
       subrace: { index: String(sub.index), name: String(sub.name), raw: sub },
       raceBonuses: bonuses,
+      variantHumanSkill,
+      variantHumanFeat,
+      halfElfVersatilitySkills,
     };
     persist(nextC);
     await renderRaceDetail(character.race?.raw ?? {}, sub, bonuses);
   };
 
+  const setFlexibleAbilityPick = (slot: 0 | 1, key: AbilityKey | "") => {
+    const raceIndex = character.race?.index;
+    const subIndex = character.subrace?.index;
+    const fixed = raceIndex === "half-elf" ? { cha: 2 as const } : {};
+    const current = getFlexibleAbilityPicks(character.raceBonuses, fixed);
+    const next: (AbilityKey | "")[] = [current[0] || "", current[1] || ""];
+    next[slot] = key;
+    const filtered = next.filter((k): k is AbilityKey => Boolean(k)).slice(0, 2);
+    const bonuses = applyFlexibleAbilityPicks(
+      raceIndex,
+      subIndex,
+      character.race?.raw,
+      character.subrace?.raw,
+      filtered,
+    );
+    persist({ ...character, raceBonuses: bonuses });
+  };
+
+  const setHalfElfSkill = (slot: 0 | 1, skill: string) => {
+    const skills = [...(character.halfElfVersatilitySkills || ["", ""])];
+    while (skills.length < 2) skills.push("");
+    skills[slot] = skill;
+    persist({ ...character, halfElfVersatilitySkills: skills.slice(0, 2) });
+  };
+
   const renderRaceDetail = async (
     race: Record<string, unknown>,
     subrace: Record<string, unknown> | null,
-    bonuses: Character["raceBonuses"]
+    bonuses: Character["raceBonuses"],
   ) => {
-    const traits = (race.traits as { index: string; name: string }[]) || [];
+    const raceTraits = (race.traits as { index: string; name: string }[]) || [];
+    const subTraits = (subrace?.racial_traits as { index: string; name: string }[]) || [];
+    const localTraits = (subrace?.localTraits as { name: string; desc: string }[]) || [];
     const traitTexts: string[] = [];
-    for (const t of traits.slice(0, 4)) {
+
+    for (const t of [...raceTraits, ...subTraits].slice(0, 6)) {
       try {
         const tr = await getTrait(t.index);
-        traitTexts.push(`<li><strong>${tr.name}</strong>: ${(tr.desc?.[0] || "").slice(0, 180)}…</li>`);
+        traitTexts.push(
+          `<li><strong>${tr.name}</strong>: ${(tr.desc?.[0] || "").slice(0, 180)}…</li>`,
+        );
       } catch {
         traitTexts.push(`<li>${t.name}</li>`);
       }
     }
+    for (const t of localTraits) {
+      traitTexts.push(`<li><strong>${t.name}</strong>: ${t.desc.slice(0, 180)}…</li>`);
+    }
+
     const bonusLine = Object.entries(bonuses)
       .map(([k, v]) => `${k.toUpperCase()} +${v}`)
       .join(", ");
+    const subDesc = subrace?.desc ? `<p>${String(subrace.desc).slice(0, 220)}…</p>` : "";
     setRaceDetail(`
       <h3>${race.name}${subrace ? ` — ${subrace.name}` : ""}</h3>
-      <p><strong>Speed:</strong> ${race.speed} · <strong>Tamaño:</strong> ${race.size}</p>
+      <p><strong>Speed:</strong> ${race.speed} · <strong>Size:</strong> ${race.size}</p>
       <p><strong>Bonuses:</strong> ${bonusLine || "None"}</p>
+      ${subDesc}
       <ul>${traitTexts.join("")}</ul>
     `);
   };
@@ -250,6 +371,19 @@ export function CharacterWizard({ initialCharacter, onSave }: CharacterWizardPro
       ? character.class.hitDie + abilityModifier(final.con)
       : "—";
 
+  const raceIndex = character.race?.index;
+  const subraceIndex = character.subrace?.index;
+  const halfElfFixed = raceIndex === "half-elf" ? { cha: 2 as const } : {};
+  const flexiblePicks = getFlexibleAbilityPicks(character.raceBonuses, halfElfFixed);
+  const needsFlexibleAbilities =
+    raceIndex === "half-elf" ||
+    (raceIndex === "human" && subraceIndex === "variant-human");
+  const halfElfSkillSlots =
+    raceIndex === "half-elf" && subraceIndex === "half-elf-skills"
+      ? (character.halfElfVersatilitySkills || ["", ""])
+      : null;
+  const isVariantHuman = raceIndex === "human" && subraceIndex === "variant-human";
+
   return (
     <>
       <div className="character-module">
@@ -352,11 +486,12 @@ export function CharacterWizard({ initialCharacter, onSave }: CharacterWizardPro
                     </button>
                   ))}
                 </div>
-                {(character.race?.raw?.subraces as { index: string; name: string }[])?.length > 0 && (
+                {(character.race?.subraces?.length ?? 0) > 0 && (
                   <div className="sub-block">
                     <h3>Subrace</h3>
+                    <p className="sub-block-hint">Required for this race — SRD and PHB options</p>
                     <div className="chip-list">
-                      {(character.race?.raw?.subraces as { index: string; name: string }[]).map((sr) => (
+                      {character.race!.subraces!.map((sr) => (
                         <button
                           key={sr.index}
                           type="button"
@@ -364,7 +499,108 @@ export function CharacterWizard({ initialCharacter, onSave }: CharacterWizardPro
                           onClick={() => selectSubrace(sr.index)}
                         >
                           {sr.name}
+                          <span className="chip-source">{(sr.source || "srd").toUpperCase()}</span>
                         </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {needsFlexibleAbilities && (
+                  <div className="sub-block">
+                    <h3>Ability score increases</h3>
+                    <p className="sub-block-hint">
+                      Choose two different abilities to increase by 1
+                      {raceIndex === "half-elf" ? " (in addition to Charisma +2)" : ""}.
+                    </p>
+                    <div className="field-grid">
+                      {[0, 1].map((slot) => (
+                        <label key={slot} className="field">
+                          <span>+1 ability {slot + 1}</span>
+                          <select
+                            value={flexiblePicks[slot] || ""}
+                            onChange={(e) =>
+                              setFlexibleAbilityPick(slot as 0 | 1, e.target.value as AbilityKey | "")
+                            }
+                          >
+                            <option value="">— Choose —</option>
+                            {ABILITIES.map((a) => (
+                              <option
+                                key={a.key}
+                                value={a.key}
+                                disabled={
+                                  flexiblePicks.includes(a.key) &&
+                                  flexiblePicks[slot] !== a.key
+                                }
+                              >
+                                {a.name}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {isVariantHuman && (
+                  <div className="sub-block">
+                    <h3>Variant Human options</h3>
+                    <div className="field-grid">
+                      <label className="field">
+                        <span>Skill proficiency</span>
+                        <select
+                          value={character.variantHumanSkill || ""}
+                          onChange={(e) =>
+                            persist({ ...character, variantHumanSkill: e.target.value || undefined })
+                          }
+                        >
+                          <option value="">— Choose —</option>
+                          {SKILL_NAMES.map((s) => (
+                            <option key={s} value={s}>
+                              {s}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="field">
+                        <span>Feat</span>
+                        <input
+                          value={character.variantHumanFeat || ""}
+                          onChange={(e) =>
+                            persist({ ...character, variantHumanFeat: e.target.value })
+                          }
+                          placeholder="e.g. Alert, Lucky, Sharpshooter"
+                        />
+                      </label>
+                    </div>
+                  </div>
+                )}
+                {halfElfSkillSlots && (
+                  <div className="sub-block">
+                    <h3>Skill Versatility</h3>
+                    <p className="sub-block-hint">Choose two skill proficiencies.</p>
+                    <div className="field-grid">
+                      {[0, 1].map((slot) => (
+                        <label key={slot} className="field">
+                          <span>Skill {slot + 1}</span>
+                          <select
+                            value={halfElfSkillSlots[slot] || ""}
+                            onChange={(e) => setHalfElfSkill(slot as 0 | 1, e.target.value)}
+                          >
+                            <option value="">— Choose —</option>
+                            {SKILL_NAMES.map((s) => (
+                              <option
+                                key={s}
+                                value={s}
+                                disabled={
+                                  halfElfSkillSlots.includes(s) &&
+                                  halfElfSkillSlots[slot] !== s
+                                }
+                              >
+                                {s}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
                       ))}
                     </div>
                   </div>

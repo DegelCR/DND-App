@@ -2,6 +2,7 @@ import type { Character } from './types'
 import { ABILITIES } from './constants'
 import { extractSkillsFromProficiencyChoice } from './api'
 import { getBackground } from './extra-data'
+import { getFlexibleAbilityPicks } from './character'
 import {
   isSpellcaster,
   usesSpellsKnown,
@@ -10,6 +11,48 @@ import {
   getPreparedLimit,
   maxSpellLevelFromSlots,
 } from './class-rules'
+
+export function getRacialSkillProficiencies(character: Character) {
+  const skills: string[] = []
+  if (character.variantHumanSkill) skills.push(character.variantHumanSkill)
+  if (character.halfElfVersatilitySkills?.length) {
+    skills.push(...character.halfElfVersatilitySkills)
+  }
+  return skills
+}
+
+function validateRaceFlexibleChoices(character: Character): { ok: boolean; message?: string } {
+  const race = character.race?.index
+  const sub = character.subrace?.index
+
+  if (race === 'half-elf') {
+    const picks = getFlexibleAbilityPicks(character.raceBonuses, { cha: 2 })
+    if (picks.length !== 2) {
+      return { ok: false, message: 'Half-Elf: choose two different ability scores to increase by 1.' }
+    }
+    if (sub === 'half-elf-skills') {
+      const skills = character.halfElfVersatilitySkills || []
+      if (skills.length !== 2 || new Set(skills).size !== 2) {
+        return { ok: false, message: 'Half-Elf Skill Versatility: choose two different skills.' }
+      }
+    }
+  }
+
+  if (race === 'human' && sub === 'variant-human') {
+    const picks = getFlexibleAbilityPicks(character.raceBonuses)
+    if (picks.length !== 2) {
+      return { ok: false, message: 'Variant Human: choose two different ability scores to increase by 1.' }
+    }
+    if (!character.variantHumanSkill) {
+      return { ok: false, message: 'Variant Human: choose one skill proficiency.' }
+    }
+    if (!character.variantHumanFeat?.trim()) {
+      return { ok: false, message: 'Variant Human: enter your chosen feat.' }
+    }
+  }
+
+  return { ok: true }
+}
 
 export function buildProficiencyChoices(classData?: Record<string, unknown>) {
   const choices =
@@ -83,7 +126,10 @@ export function validateStep(
       return { ok: true }
     case 2:
       if (!character.race) return { ok: false, message: 'Choose a race.' }
-      return { ok: true }
+      if (character.race.subraces?.length && !character.subrace) {
+        return { ok: false, message: 'Choose a subrace.' }
+      }
+      return validateRaceFlexibleChoices(character)
     case 3:
       if (!character.class) return { ok: false, message: 'Choose a class.' }
       if (character.class.subclasses?.length && !character.subclass) {
@@ -119,6 +165,7 @@ export function syncSkillProficiencies(
   const names = new Set<string>()
   fixedClass.forEach((s) => names.add(s.name))
   fixedBg.forEach((n) => names.add(n))
+  getRacialSkillProficiencies(character).forEach((n) => names.add(n))
   choices.forEach((group) => {
     ;(character.skillChoices[group.id] || []).forEach((idx) => {
       const skill = group.options.find((o) => o.index === idx)
