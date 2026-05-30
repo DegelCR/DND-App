@@ -52,7 +52,7 @@ npm run preview
 
 **Phases 0–8 complete:** Dice, Bestiary, Combat, Session notes, Compendium, Characters, Generators, **Battle map**.
 
-**Roadmap MVP done.** Deployed on GitHub Pages. Next backlog: PWA, add-to-combat, etc.
+**Roadmap MVP done.** Deployed on [GitHub Pages](https://degelcr.github.io/DND-App/). Next backlog: PWA, add-to-combat, etc.
 
 ## Scripts
 
@@ -72,14 +72,15 @@ npm run preview
 | Styles | Tailwind CSS v4 |
 | Routing | React Router v7 |
 | State | Zustand |
-| Storage | Dexie (IndexedDB) |
-| Animations | lottie-react (fumble, lazy-loaded) |
+| Storage | Dexie (IndexedDB, schema v7) |
+| Animations | lottie-react (fumble) + [React Bits](https://reactbits.dev) (UI effects, `ogl` for Evil Eye) |
 
 ## Structure
 
 ```
 src/
-├── components/     # Shared UI (layout, cards)
+├── components/     # Shared UI (layout, cards, reactbits/)
+│   └── reactbits/  # Letter Glitch, GlowCard, Folder, Evil Eye (adapted from React Bits)
 ├── features/       # Feature modules (dice, bestiary, combat, session, compendium, characters, generators, map)
 ├── lib/            # Utilities (dice, SRD, compendium, character, generators, map, navigation)
 │   ├── character/  # PC builder logic (ported from Forja del Héroe)
@@ -194,7 +195,20 @@ Owlbear-style **upload** workflow (no map editor yet).
 - Custom expressions (`2d6+3`, `1d20+5`)
 - Last 20 rolls persisted in IndexedDB
 - Natural 1: Lottie fumble animation (or 😈 fallback)
-- Natural 20: highlighted critical
+- Natural 20: Evil Eye animation ([React Bits](https://reactbits.dev), lazy-loaded) + green highlight
+
+### UI effects (React Bits)
+
+Adapted from [React Bits](https://reactbits.dev) (MIT + Commons Clause):
+
+| Effect | Where |
+|--------|-------|
+| Letter Glitch | Sidebar background |
+| GlowCard (Magic Bento) | Module cards on Home |
+| Folder | Bestiary favorites/recents |
+| Evil Eye | Dice roller on natural 20 |
+
+Dependency: `ogl` (WebGL, used only by Evil Eye).
 
 ## Roadmap
 

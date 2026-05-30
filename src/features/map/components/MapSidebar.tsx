@@ -1,11 +1,13 @@
-import { useRef } from 'react'
-import type { BattleMapRecord } from '@/types/map'
+import { useRef, useState } from 'react'
+import { MAP_BACKGROUND_OPTIONS } from '@/lib/map/assets'
+import type { BattleMapRecord, MapBackgroundType } from '@/types/map'
 
 interface MapSidebarProps {
   maps: BattleMapRecord[]
   activeId: number | null
   onSelect: (id: number) => void
   onUpload: (file: File) => void
+  onCreateBlank: (name: string, background: MapBackgroundType) => void
   onDelete: (id: number) => void
   onRename: (id: number, name: string) => void
 }
@@ -15,16 +17,19 @@ export function MapSidebar({
   activeId,
   onSelect,
   onUpload,
+  onCreateBlank,
   onDelete,
   onRename,
 }: MapSidebarProps) {
   const fileRef = useRef<HTMLInputElement>(null)
+  const [blankName, setBlankName] = useState('New map')
+  const [blankBackground, setBlankBackground] = useState<MapBackgroundType>('grass')
 
   return (
     <aside className="flex flex-col gap-4 rounded-xl border border-table-700 bg-table-900/40 p-4">
       <div>
         <h2 className="text-sm font-semibold uppercase tracking-wide text-table-400">Maps</h2>
-        <p className="mt-1 text-xs text-table-500">Upload PNG, JPG, or WebP (max 15 MB)</p>
+        <p className="mt-1 text-xs text-table-500">Upload an image or build with stamps</p>
       </div>
 
       <input
@@ -46,7 +51,35 @@ export function MapSidebar({
         Upload map
       </button>
 
-      <ul className="flex max-h-[420px] flex-col gap-1 overflow-y-auto">
+      <div className="rounded-lg border border-table-700 bg-table-950/50 p-3">
+        <p className="text-xs font-medium uppercase tracking-wide text-table-500">New blank map</p>
+        <input
+          value={blankName}
+          onChange={(e) => setBlankName(e.target.value)}
+          placeholder="Map name"
+          className="mt-2 w-full rounded border border-table-600 bg-table-900 px-2 py-1.5 text-sm text-table-100 outline-none focus:border-gold-500/50"
+        />
+        <select
+          value={blankBackground}
+          onChange={(e) => setBlankBackground(e.target.value as MapBackgroundType)}
+          className="mt-2 w-full rounded border border-table-600 bg-table-900 px-2 py-1.5 text-sm text-table-100 outline-none focus:border-gold-500/50"
+        >
+          {MAP_BACKGROUND_OPTIONS.map((opt) => (
+            <option key={opt.id} value={opt.id}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          onClick={() => onCreateBlank(blankName, blankBackground)}
+          className="mt-2 w-full rounded-lg border border-table-500 bg-table-800 px-3 py-2 text-sm text-table-100 hover:border-gold-500/40 hover:bg-table-700"
+        >
+          Create blank map
+        </button>
+      </div>
+
+      <ul className="flex max-h-[320px] flex-col gap-1 overflow-y-auto">
         {maps.length === 0 ? (
           <li className="rounded-lg border border-dashed border-table-700 px-3 py-6 text-center text-sm text-table-500">
             No maps yet
@@ -64,6 +97,7 @@ export function MapSidebar({
                   onClick={() => map.id != null && onSelect(map.id)}
                   className="min-w-0 flex-1 truncate text-left text-sm text-table-200"
                 >
+                  {map.source === 'builder' && <span className="mr-1 text-table-500">✏</span>}
                   {map.name}
                 </button>
                 <button

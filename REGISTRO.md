@@ -131,12 +131,13 @@ Documento de seguimiento detallado del desarrollo de la aplicación de mesa para
 - Primer commit: MVP fases 0–8 + React Bits
 - **GitHub Pages** configurado con GitHub Actions:
   - Workflow `.github/workflows/deploy-pages.yml` — build en cada push a `main`
+  - Deploy a rama **`gh-pages`** vía `peaceiris/actions-gh-pages`
   - `vite.config.ts` — `base: '/DND-App/'` en CI (vía `GITHUB_REPOSITORY`)
   - `App.tsx` — `BrowserRouter basename={import.meta.env.BASE_URL}`
   - `404.html` — copia de `index.html` para rutas SPA al refrescar
 - URL pública: [https://degelcr.github.io/DND-App/](https://degelcr.github.io/DND-App/)
 
-**Estado:** ✅ Infra de deploy lista. El primer deploy corre al pushear el workflow.
+**Estado:** ✅ Repo + deploy activos. Activar Pages una vez en Settings → Branch `gh-pages` / root.
 
 ---
 
@@ -268,6 +269,27 @@ Documento de seguimiento detallado del desarrollo de la aplicación de mesa para
 - Fix botones negros en `/generators`: `gold-600` → `gold-500` (color no definido en tema)
 - Tabs y botones Copy con mejor contraste
 - REGISTRO/README sincronizados: fases 7–8, Dexie v7, rutas, árbol, índice
+
+---
+
+### Sesión 14 — React Bits UI (30 may 2026)
+
+**Origen:** [React Bits](https://reactbits.dev) — componentes animados (MIT + Commons Clause).
+
+**Integrado:**
+
+| Componente | Ubicación | Función |
+|------------|-----------|---------|
+| Letter Glitch | `Sidebar.tsx` | Fondo animado del menú lateral |
+| GlowCard (Magic Bento) | `ModuleCard.tsx` | Borde dorado que sigue el cursor |
+| Folder | `MonsterSidebar.tsx` | Carpeta favoritos/recientes en Bestiary |
+| Evil Eye | `CriticalAnimation.tsx` | Animación **natural 20** (WebGL, lazy) |
+
+**Dependencia nueva:** `ogl` (solo Evil Eye).
+
+**Código:** `src/components/reactbits/` — adaptado al tema oscuro, sin React Bits Pro.
+
+**Estado:** ✅ Integración inicial completada. Letter Glitch ajustable sin afectar otros módulos.
 
 ---
 
@@ -587,13 +609,14 @@ Upload mapa, grid, tokens drag & drop, fog of war manual, regla de medición.
 
 ### Dependencias instaladas
 
-**Producción (actualizado Fase 1):**
+**Producción (actualizado):**
 - `react` ^19.2.6
 - `react-dom` ^19.2.6
 - `react-router-dom` ^7.16.0
 - `zustand` ^5.0.14
 - `dexie` ^4.4.3
 - `lottie-react` ^2.4.1
+- `ogl` ^1.0.11 (Evil Eye / React Bits)
 
 **Desarrollo:**
 - `vite` ^8.0.12
@@ -662,6 +685,7 @@ REGISTRO.md          ← este archivo
 | 1.8 | Módulo marcado `ready` en navegación | ✅ |
 | 1.9 | UI traducida a inglés | ✅ |
 | 1.10 | Animación Lottie en pifia (nat 1) | ✅ (requiere JSON manual) |
+| 1.11 | Animación nat 20 (Evil Eye, React Bits) | ✅ |
 
 ### Archivos creados/modificados
 
@@ -672,6 +696,7 @@ src/features/dice/useDiceRolls.ts
 src/features/dice/components/DiceRoller.tsx
 src/features/dice/components/RollHistory.tsx
 src/features/dice/components/FumbleAnimation.tsx   ← Lottie fumble
+src/features/dice/components/CriticalAnimation.tsx ← Evil Eye nat 20
 src/types/index.ts
 src/lib/navigation.ts
 src/features/home/HomePage.tsx
@@ -689,7 +714,7 @@ public/animations/README.md                      ← instrucciones asset
 - History: last 20 rolls, timestamps, critical/fumble highlights
 - Clear history button
 - **Natural 1:** Lottie devil-d20 animation (or 😈 fallback)
-- **Natural 20:** green highlight + "Natural 20!"
+- **Natural 20:** Evil Eye animation (React Bits, lazy) + green highlight
 - Shake animation on every roll
 - UI language: **English**
 
@@ -720,7 +745,9 @@ Las rutas en español redirigen automáticamente (`App.tsx`).
 **Flujo:**
 
 ```
-Roll d20 → shake 🎲 (450 ms) → if nat 1 → Lottie animation + total + "Natural 1!"
+Roll d20 → shake 🎲 (450 ms)
+  → nat 1  → Lottie fumble (o 😈 fallback) + total
+  → nat 20 → Evil Eye (React Bits, lazy) + total en verde
 ```
 
 **Asset requerido (descarga manual):**
@@ -733,9 +760,27 @@ Roll d20 → shake 🎲 (450 ms) → if nat 1 → Lottie animation + total + "Na
 
 **Licencia:** [Lottie Simple License](https://lottiefiles.com/page/license) — uso comercial permitido, atribución opcional (enlace en Home).
 
-**Backlog relacionado:**
-- [ ] Animación nat 20 (pendiente buscar asset)
-- [ ] Confirmar que el JSON está en el repo o `.gitignore` según preferencia
+**Natural 20 (post-MVP):**
+- ✅ **Evil Eye** (React Bits) en `CriticalAnimation.tsx` — lazy-loaded, fallback ✨
+- Ver §9.3
+
+**Pendiente manual:**
+- [ ] Confirmar que el JSON fumble está en el repo o `.gitignore` según preferencia
+
+---
+
+### 9.3 React Bits (UI animada)
+
+**Licencia:** [MIT + Commons Clause](https://github.com/DavidHDev/react-bits) — uso hobby OK; Commons Clause limita SaaS comercial sobre el componente.
+
+| Componente | Archivo | Pantalla |
+|------------|---------|----------|
+| Letter Glitch | `LetterGlitch.tsx` | Sidebar (fondo) |
+| GlowCard | `GlowCard.tsx` | Tarjetas módulos (Home) |
+| Folder | `Folder.tsx` | Bestiary sidebar |
+| Evil Eye | `EvilEye.tsx` | Dice nat 20 |
+
+Atribución en Home → sección SRD content.
 
 ---
 
@@ -1109,12 +1154,12 @@ El código base vive en `C:\Users\Fran\Desktop\pagina web` (Next.js, `HANDOFF-AG
 │  Estilos:  Tailwind CSS v4              │
 │  Routing:  React Router v7              │
 │  Estado:   Zustand                      │
-│  DB local: Dexie 4 → IndexedDB (schema v6) │
-│  Animación: lottie-react (lazy chunk)   │
+│  DB local: Dexie 4 → IndexedDB (schema v7) │
+│  Animación: lottie-react + React Bits (ogl) │
 │  UI lang:  English                      │
 │  Datos:    SRD API (bestiario, compendio, personajes) │
 │  Ficha PC: CSS pergamino scoped (.character-module) │
-│  Deploy:   GitHub Pages (Actions → main) │
+│  Deploy:   GitHub Pages (push main → gh-pages) │
 └─────────────────────────────────────────┘
 ```
 
@@ -1136,13 +1181,15 @@ Convención acordada:
 | `src/stores/` | Stores Zustand |
 | `src/types/` | Interfaces TypeScript compartidas |
 | `public/animations/` | Assets Lottie (JSON descargado manualmente) |
+| `src/components/reactbits/` | Efectos UI adaptados de React Bits |
 
 ### Árbol actual (resumido)
 
 ```
 src/
-├── components/layout/          AppLayout, Sidebar
-├── components/ui/              PageHeader, ModuleCard, PlaceholderPage
+├── components/layout/          AppLayout, Sidebar (+ Letter Glitch)
+├── components/ui/              PageHeader, ModuleCard (+ GlowCard)
+├── components/reactbits/       LetterGlitch, GlowCard, Folder, EvilEye
 ├── features/
 │   ├── home/HomePage.tsx
 │   ├── dice/
@@ -1151,7 +1198,8 @@ src/
 │   │   └── components/
 │   │       ├── DiceRoller.tsx
 │   │       ├── RollHistory.tsx
-│   │       └── FumbleAnimation.tsx
+│   │       ├── FumbleAnimation.tsx
+│   │       └── CriticalAnimation.tsx
 │   ├── bestiary/
 │   │   ├── BestiaryPage.tsx
 │   │   ├── useBestiary.ts
@@ -1352,6 +1400,8 @@ Configuración centralizada en `src/lib/navigation.ts` (`NAV_MODULES`).
 - `PlaceholderPage` — "Coming soon" + phase number
 - `Sidebar` — Collapsible navigation
 - `FumbleAnimation` — Lottie player for nat 1
+- `CriticalAnimation` — Evil Eye (React Bits) for nat 20
+- `LetterGlitch` / `GlowCard` / `Folder` — React Bits effects (sidebar, cards, bestiary)
 
 ---
 
@@ -1390,7 +1440,7 @@ npm run build
 npm run preview
 ```
 
-- **Deploy automático:** push a `main` → workflow publica en rama `gh-pages`
+- **Deploy automático:** push a `main` → workflow `deploy-pages.yml` publica `dist/` en rama `gh-pages` (peaceiris/actions-gh-pages)
 - **URL:** https://degelcr.github.io/DND-App/
 - **Activar Pages (una vez, obligatorio):** [Settings → Pages](https://github.com/DegelCR/DND-App/settings/pages) → Source: **Deploy from a branch** → Branch: **`gh-pages`** → **`/ (root)`** → Save. Sin este paso la URL da 404 aunque el código esté subido.
 
@@ -1444,7 +1494,6 @@ npm run preview
 Roadmap de fases completado. Prioridades sugeridas:
 - **Add to combat** desde ficha de personaje → tracker (Fase 3)
 - **Audio ambiente** — archivos locales MP3/OGG (Spotify/Pocket Bard descartados por ahora)
-- Animación nat 20 (Lottie)
 - Modo PWA para tablet en mesa física
 - **Homebrew & import externo** (ver §24.1)
 
@@ -1505,6 +1554,16 @@ Esta aplicación **no está afiliada ni respaldada por Wizards of the Coast**.
 - Uso comercial: permitido
 - Atribución: no obligatoria (enlace en Home como cortesía)
 
+### React Bits (UI animada)
+
+| Fuente | Licencia | Uso en app |
+|--------|----------|------------|
+| [React Bits](https://reactbits.dev) / [DavidHDev/react-bits](https://github.com/DavidHDev/react-bits) | MIT + Commons Clause | Letter Glitch, GlowCard, Folder, Evil Eye |
+
+- Hobby / portfolio: OK
+- Commons Clause: no revender el componente como servicio competidor
+- Atribución: enlace en Home
+
 ### Qué NO se puede usar sin licencia aparte (SRD)
 - Marca registrada "Dungeons & Dragons" en branding comercial
 - Contenido fuera del SRD (Beholder, Mind Flayer, Artificer, aventuras oficiales, Forgotten Realms)
@@ -1539,6 +1598,8 @@ Esta aplicación **no está afiliada ni respaldada por Wizards of the Coast**.
 - [Devil D20 Fumble — LottieFiles](https://lottiefiles.com/free-animation/devil-d20-fumble-rEH73ips20)
 - [Lottie Simple License](https://lottiefiles.com/page/license)
 - [lottie-react](https://www.npmjs.com/package/lottie-react)
+- [React Bits](https://reactbits.dev) — Letter Glitch, Magic Bento, Folder, Evil Eye
+- [react-bits repo](https://github.com/DavidHDev/react-bits) — MIT + Commons Clause
 
 ### Documentación técnica
 - [Vite](https://vite.dev/)
@@ -1594,6 +1655,9 @@ Copia y rellena al completar cada fase:
 | 30 may 2026 | Fase 7 — Generadores (names, loot, NPC, encounter), ruta `/generators` |
 | 30 may 2026 | Fase 8 — Battle map (upload, grid, tokens, fog, measure), Dexie v7, `/map` |
 | 29 may 2026 | Sync REGISTRO/README MVP completo; fix botones Generators (`gold-500`) |
+| 30 may 2026 | React Bits (Letter Glitch, GlowCard, Folder, Evil Eye nat 20), dep `ogl` |
+| 30 may 2026 | Git push [DegelCR/DND-App](https://github.com/DegelCR/DND-App) + GitHub Pages |
+| 30 may 2026 | Sync REGISTRO/README: React Bits, Dexie v7 en stack, nat 20, deploy gh-pages |
 
 ---
 

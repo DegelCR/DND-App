@@ -1,9 +1,32 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { db } from '@/db'
-import { defaultGridSize, readImageDimensions, validateMapFile } from '@/lib/map/utils'
-import type { BattleMapRecord, MapToken } from '@/types/map'
+import { db, initDatabase } from '@/db'
+import {
+  BLANK_MAP_GRID,
+  BLANK_MAP_HEIGHT,
+  BLANK_MAP_WIDTH,
+  createBlankMapBlob,
+  defaultGridSize,
+  readImageDimensions,
+  validateMapFile,
+} from '@/lib/map/utils'
+import type { BattleMapRecord, MapBackgroundType, MapStamp, MapToken } from '@/types/map'
 
 const ACTIVE_MAP_KEY = 'active_battle_map_id'
+
+function normalizeMap(map: BattleMapRecord): BattleMapRecord {
+  return {
+    ...map,
+    tokens: map.tokens ?? [],
+    stamps: map.stamps ?? [],
+    fogBlob: map.fogBlob ?? null,
+    source: map.source ?? 'upload',
+  }
+}
+
+function toImageBlob(value: BattleMapRecord['imageBlob']): Blob {
+  if (value instanceof Blob) return value
+  return new Blob([value as BlobPart], { type: 'image/png' })
+}
 
 async function getActiveMapId(): Promise<number | null> {
   const row = await db.settings.get({ key: ACTIVE_MAP_KEY })
@@ -34,14 +57,18 @@ export function useBattleMaps() {
 
   const refreshMaps = useCallback(async () => {
     const rows = await db.battleMaps.orderBy('updatedAt').reverse().toArray()
-    setMaps(rows)
-    return rows
+    const normalized = rows.map((row) =>
+      normalizeMap({ ...row, imageBlob: toImageBlob(row.imageBlob) }),
+    )
+    setMaps(normalized)
+    return normalized
   }, [])
 
   const loadActiveMap = useCallback(async (id: number) => {
     const map = await db.battleMaps.get(id)
     if (map) {
-      setActiveMap(map)
+      const normalized = normalizeMap({ ...map, imageBlob: toImageBlob(map.imageBlob) })
+      setActiveMap(normalized)
       setActiveMapIdState(id)
       await setActiveMapId(id)
     }
@@ -50,6 +77,7 @@ export function useBattleMaps() {
   useEffect(() => {
     async function init() {
       try {
+        await initDatabase()
         const rows = await refreshMaps()
         const savedId = await getActiveMapId()
         const target =
@@ -58,6 +86,10 @@ export function useBattleMaps() {
           setActiveMap(target)
           setActiveMapIdState(target.id)
         }
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : 'Could not load battle maps from local storage.'
+        setError(message)
       } finally {
         setLoading(false)
       }
@@ -96,7 +128,9 @@ export function useBattleMaps() {
           showGrid: true,
           feetPerSquare: 5,
           tokens: [],
+          stamps: [],
           fogBlob: null,
+          source: 'upload',
           createdAt: now,
           updatedAt: now,
         }
@@ -108,6 +142,45 @@ export function useBattleMaps() {
         return id
       } catch {
         setError('Could not import map image.')
+        return null
+      }
+    },
+    [loadActiveMap, refreshMaps],
+  )
+
+  const createBlankMap = useCallback(
+    async (name: string, background: MapBackgroundType) => {
+      setError(null)
+      try {
+        const blob = await createBlankMapBlob(background)
+        const now = new Date()
+        const record: BattleMapRecord = {
+          name: name.trim() || 'Untitled map',
+          imageBlob: blob,
+          imageWidth: BLANK_MAP_WIDTH,
+          imageHeight: BLANK_MAP_HEIGHT,
+          gridSize: BLANK_MAP_GRID,
+          gridOffsetX: 0,
+          gridOffsetY: 0,
+          showGrid: true,
+          feetPerSquare: 5,
+          tokens: [],
+          stamps: [],
+          fogBlob: null,
+          source: 'builder',
+          backgroundType: background,
+          createdAt: now,
+          updatedAt: now,
+        }
+
+        const id = await db.battleMaps.add(record)
+        if (id == null) throw new Error('Failed to save map')
+        await refreshMaps()
+        await loadActiveMap(id)
+        return id
+      } catch (err) {
+        console.error('createBlankMap failed', err)
+        setError('Could not create blank map. Try clearing site data and reload.')
         return null
       }
     },
@@ -176,6 +249,13 @@ export function useBattleMaps() {
     [scheduleSave],
   )
 
+  const updateStamps = useCallback(
+    (stamps: MapStamp[]) => {
+      scheduleSave({ stamps })
+    },
+    [scheduleSave],
+  )
+
   const updateGrid = useCallback(
     (patch: Partial<
       Pick<
@@ -210,9 +290,11 @@ export function useBattleMaps() {
     activeMapId,
     selectMap,
     createMapFromFile,
+    createBlankMap,
     deleteMap,
     renameMap,
     updateTokens,
+    updateStamps,
     updateGrid,
     saveFog,
     clearFog,

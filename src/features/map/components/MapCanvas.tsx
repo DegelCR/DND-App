@@ -1,16 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { getMapAsset } from '@/lib/map/assets'
 import {
+  createStamp,
   createToken,
   distanceInSquares,
   formatDistance,
   screenToImage,
+  snapPointToGrid,
 } from '@/lib/map/utils'
-import type { BattleMapRecord, MapToken, MapTool } from '@/types/map'
+import type { BattleMapRecord, MapStamp, MapToken, MapTool } from '@/types/map'
 
 interface MapCanvasProps {
   map: BattleMapRecord
   tool: MapTool
+  selectedAssetId: string | null
+  snapToGrid: boolean
   onTokensChange: (tokens: MapToken[]) => void
+  onStampsChange: (stamps: MapStamp[]) => void
   onGridChange: (patch: Partial<
     Pick<BattleMapRecord, 'gridSize' | 'gridOffsetX' | 'gridOffsetY' | 'showGrid' | 'feetPerSquare'>
   >) => void
@@ -25,7 +31,10 @@ const BRUSH_SIZE = 28
 export function MapCanvas({
   map,
   tool,
+  selectedAssetId,
+  snapToGrid,
   onTokensChange,
+  onStampsChange,
   onGridChange,
   onFogSave,
   onMeasureChange,
@@ -37,12 +46,18 @@ export function MapCanvas({
   const fogSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [imageUrl, setImageUrl] = useState<string | null>(null)
+  const [imageError, setImageError] = useState<string | null>(null)
   const [pan, setPan] = useState({ x: 40, y: 40 })
   const [zoom, setZoom] = useState(1)
   const [tokens, setTokens] = useState<MapToken[]>(map.tokens)
   const tokensRef = useRef(tokens)
   tokensRef.current = tokens
+  const [stamps, setStamps] = useState<MapStamp[]>(map.stamps ?? [])
+  const stampsRef = useRef(stamps)
+  stampsRef.current = stamps
   const [dragTokenId, setDragTokenId] = useState<string | null>(null)
+  const [dragStampId, setDragStampId] = useState<string | null>(null)
+  const [selectedStampId, setSelectedStampId] = useState<string | null>(null)
   const [isPanning, setIsPanning] = useState(false)
   const [isDrawingFog, setIsDrawingFog] = useState(false)
   const [measureStart, setMeasureStart] = useState<{ x: number; y: number } | null>(null)
@@ -70,10 +85,22 @@ export function MapCanvas({
   }, [onResetViewRef, resetView])
 
   useEffect(() => {
+    setImageError(null)
     if (imageUrlRef.current) URL.revokeObjectURL(imageUrlRef.current)
-    const url = URL.createObjectURL(map.imageBlob)
-    imageUrlRef.current = url
-    setImageUrl(url)
+    imageUrlRef.current = null
+    setImageUrl(null)
+
+    try {
+      const blob =
+        map.imageBlob instanceof Blob
+          ? map.imageBlob
+          : new Blob([map.imageBlob as BlobPart], { type: 'image/png' })
+      const url = URL.createObjectURL(blob)
+      imageUrlRef.current = url
+      setImageUrl(url)
+    } catch {
+      setImageError('Could not display map image. Try re-uploading or creating a new map.')
+    }
 
     return () => {
       if (imageUrlRef.current) URL.revokeObjectURL(imageUrlRef.current)
@@ -82,6 +109,8 @@ export function MapCanvas({
 
   useEffect(() => {
     setTokens(map.tokens)
+    setStamps(map.stamps ?? [])
+    setSelectedStampId(null)
     setMeasureStart(null)
     setMeasureEnd(null)
     onMeasureChange(null)
@@ -110,28 +139,6 @@ export function MapCanvas({
   useEffect(() => {
     resetView()
   }, [map.id, resetView])
-
-  useEffect(() => {
-    function onKeyDown(e: KeyboardEvent) {
-      if (tool !== 'pan') return
-      const step = e.shiftKey ? 10 : 1
-      if (e.key === 'ArrowLeft') {
-        e.preventDefault()
-        onGridChange({ gridOffsetX: map.gridOffsetX - step })
-      } else if (e.key === 'ArrowRight') {
-        e.preventDefault()
-        onGridChange({ gridOffsetX: map.gridOffsetX + step })
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault()
-        onGridChange({ gridOffsetY: map.gridOffsetY - step })
-      } else if (e.key === 'ArrowDown') {
-        e.preventDefault()
-        onGridChange({ gridOffsetY: map.gridOffsetY + step })
-      }
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [tool, map.gridOffsetX, map.gridOffsetY, onGridChange])
 
   const scheduleFogSave = useCallback(() => {
     const canvas = fogCanvasRef.current
@@ -175,6 +182,78 @@ export function MapCanvas({
     [onTokensChange],
   )
 
+  const commitStamps = useCallback(
+    (next: MapStamp[]) => {
+      setStamps(next)
+      onStampsChange(next)
+    },
+    [onStampsChange],
+  )
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (tool === 'stamp' && selectedStampId) {
+        if (e.key === 'Delete' || e.key === 'Backspace') {
+          e.preventDefault()
+          commitStamps(stampsRef.current.filter((s) => s.id !== selectedStampId))
+          setSelectedStampId(null)
+          return
+        }
+        if (e.key === 'r' || e.key === 'R') {
+          e.preventDefault()
+          commitStamps(
+            stampsRef.current.map((s) =>
+              s.id === selectedStampId ? { ...s, rotation: (s.rotation + 90) % 360 } : s,
+            ),
+          )
+          return
+        }
+      }
+
+      if (tool !== 'pan') return
+      const step = e.shiftKey ? 10 : 1
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault()
+        onGridChange({ gridOffsetX: map.gridOffsetX - step })
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault()
+        onGridChange({ gridOffsetX: map.gridOffsetX + step })
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        onGridChange({ gridOffsetY: map.gridOffsetY - step })
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        onGridChange({ gridOffsetY: map.gridOffsetY + step })
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [commitStamps, tool, selectedStampId, map.gridOffsetX, map.gridOffsetY, onGridChange])
+
+  const resolvePoint = useCallback(
+    (x: number, y: number) => {
+      if (!snapToGrid) return { x, y }
+      if (tool === 'stamp' || dragStampId) {
+        return snapPointToGrid(x, y, map.gridSize, map.gridOffsetX, map.gridOffsetY)
+      }
+      return { x, y }
+    },
+    [dragStampId, map.gridOffsetX, map.gridOffsetY, map.gridSize, snapToGrid, tool],
+  )
+
+  const hitTestStamp = useCallback(
+    (x: number, y: number) => {
+      for (let i = stamps.length - 1; i >= 0; i--) {
+        const stamp = stamps[i]
+        const asset = getMapAsset(stamp.assetId)
+        const radius = ((asset?.size ?? 40) * stamp.scale) / 2
+        if (Math.hypot(stamp.x - x, stamp.y - y) < radius / zoom + 4) return stamp
+      }
+      return null
+    },
+    [stamps, zoom],
+  )
+
   const handleWheel = useCallback(
     (e: React.WheelEvent) => {
       e.preventDefault()
@@ -201,6 +280,22 @@ export function MapCanvas({
       setIsPanning(true)
       panStartRef.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y }
       e.currentTarget.setPointerCapture(e.pointerId)
+      return
+    }
+
+    if (tool === 'stamp') {
+      const hit = hitTestStamp(point.x, point.y)
+      if (hit) {
+        setSelectedStampId(hit.id)
+        setDragStampId(hit.id)
+        dragOffsetRef.current = { x: point.x - hit.x, y: point.y - hit.y }
+        e.currentTarget.setPointerCapture(e.pointerId)
+      } else if (selectedAssetId) {
+        const placed = resolvePoint(point.x, point.y)
+        const next = [...stamps, createStamp(selectedAssetId, placed.x, placed.y)]
+        commitStamps(next)
+        setSelectedStampId(next[next.length - 1].id)
+      }
       return
     }
 
@@ -256,6 +351,19 @@ export function MapCanvas({
       return
     }
 
+    if (dragStampId) {
+      const raw = {
+        x: point.x - dragOffsetRef.current.x,
+        y: point.y - dragOffsetRef.current.y,
+      }
+      const placed = resolvePoint(raw.x, raw.y)
+      const next = stamps.map((s) =>
+        s.id === dragStampId ? { ...s, x: placed.x, y: placed.y } : s,
+      )
+      setStamps(next)
+      return
+    }
+
     if (dragTokenId) {
       const next = tokens.map((t) =>
         t.id === dragTokenId
@@ -275,6 +383,10 @@ export function MapCanvas({
     if (dragTokenId) {
       commitTokens(tokensRef.current)
       setDragTokenId(null)
+    }
+    if (dragStampId) {
+      commitStamps(stampsRef.current)
+      setDragStampId(null)
     }
     setIsPanning(false)
     setIsDrawingFog(false)
@@ -300,11 +412,26 @@ export function MapCanvas({
       }
     : undefined
 
+  const handleDeleteStamp = (id: string) => {
+    commitStamps(stamps.filter((s) => s.id !== id))
+    if (selectedStampId === id) setSelectedStampId(null)
+  }
+
+  const handleRotateStamp = (id: string) => {
+    commitStamps(
+      stamps.map((s) => (s.id === id ? { ...s, rotation: (s.rotation + 90) % 360 } : s)),
+    )
+  }
+
   const cursor =
     tool === 'pan'
       ? isPanning
         ? 'grabbing'
         : 'grab'
+      : tool === 'stamp'
+        ? selectedAssetId
+          ? 'crosshair'
+          : 'default'
       : tool === 'token'
         ? 'crosshair'
         : tool === 'fog' || tool === 'erase'
@@ -326,6 +453,11 @@ export function MapCanvas({
         onPointerLeave={handlePointerUp}
         onContextMenu={(e) => e.preventDefault()}
       >
+        {imageError && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-table-950/90 p-6 text-center">
+            <p className="max-w-sm text-sm text-red-200">{imageError}</p>
+          </div>
+        )}
         <div
           className="absolute left-0 top-0 origin-top-left"
           style={{
@@ -349,6 +481,34 @@ export function MapCanvas({
             className="pointer-events-none absolute inset-0"
             style={gridStyle}
           />
+
+          {stamps.map((stamp) => {
+            const asset = getMapAsset(stamp.assetId)
+            if (!asset) return null
+            const size = asset.size * stamp.scale
+            const isSelected = selectedStampId === stamp.id
+            return (
+              <img
+                key={stamp.id}
+                src={asset.src}
+                alt={asset.label}
+                draggable={false}
+                className={`absolute select-none ${
+                  isSelected ? 'ring-2 ring-gold-400 ring-offset-1 ring-offset-transparent' : ''
+                }`}
+                style={{
+                  left: stamp.x,
+                  top: stamp.y,
+                  width: size,
+                  height: size,
+                  transform: `translate(-50%, -50%) rotate(${stamp.rotation}deg)`,
+                  pointerEvents: tool === 'stamp' ? 'auto' : 'none',
+                  cursor: tool === 'stamp' ? 'grab' : 'default',
+                }}
+                title={asset.label}
+              />
+            )
+          })}
 
           <svg
             className="pointer-events-none absolute inset-0 overflow-visible"
@@ -398,6 +558,50 @@ export function MapCanvas({
           ))}
         </div>
       </div>
+
+      {tool === 'stamp' && stamps.length > 0 && (
+        <div className="max-h-28 overflow-y-auto border-t border-table-700 bg-table-900/60 px-4 py-2">
+          <p className="mb-2 text-xs uppercase tracking-wide text-table-500">
+            Placed assets · R to rotate · Del to remove
+          </p>
+          <ul className="flex flex-wrap gap-2">
+            {stamps.map((stamp) => {
+              const asset = getMapAsset(stamp.assetId)
+              return (
+                <li
+                  key={stamp.id}
+                  className={`flex items-center gap-1 rounded-lg px-2 py-1 ${
+                    selectedStampId === stamp.id ? 'bg-gold-500/15 ring-1 ring-gold-500/40' : 'bg-table-800'
+                  }`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setSelectedStampId(stamp.id)}
+                    className="text-sm text-table-200"
+                  >
+                    {asset?.label ?? stamp.assetId}
+                  </button>
+                  <button
+                    type="button"
+                    title="Rotate 90°"
+                    onClick={() => handleRotateStamp(stamp.id)}
+                    className="text-xs text-table-500 hover:text-gold-300"
+                  >
+                    ↻
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteStamp(stamp.id)}
+                    className="text-xs text-table-500 hover:text-red-400"
+                  >
+                    ✕
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      )}
 
       {tool === 'token' && tokens.length > 0 && (
         <div className="max-h-36 overflow-y-auto border-t border-table-700 bg-table-900/60 px-4 py-2">

@@ -8,7 +8,19 @@ export interface MapToken {
   y: number
 }
 
-export type MapTool = 'pan' | 'token' | 'fog' | 'erase' | 'measure'
+export interface MapStamp {
+  id: string
+  assetId: string
+  x: number
+  y: number
+  /** Rotation in degrees (0, 90, 180, 270) */
+  rotation: number
+  scale: number
+}
+
+export type MapBackgroundType = 'grass' | 'stone' | 'dungeon' | 'sand' | 'water'
+
+export type MapTool = 'pan' | 'stamp' | 'token' | 'fog' | 'erase' | 'measure'
 
 export interface BattleMapRecord {
   id?: number
@@ -22,7 +34,10 @@ export interface BattleMapRecord {
   showGrid: boolean
   feetPerSquare: number
   tokens: MapToken[]
+  stamps?: MapStamp[]
   fogBlob?: Blob | null
+  source?: 'upload' | 'builder'
+  backgroundType?: MapBackgroundType
   updatedAt: Date
   createdAt: Date
 }
